@@ -1,9 +1,5 @@
 package org.opendaylight.snmp4sdn.snmpget;
 
-/**
- * Hello world!
- *
- */
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -14,26 +10,29 @@ import org.snmp4j.smi.Integer32;
 import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-public class SnmpGetExample
+public class SnmpSetExample
 {
   private static String  ipAddress  = "192.168.1.253";
 
   private static String  port    = "161";
 
-  // OID of MIB RFC 1213; Scalar Object = .iso.org.dod.internet.mgmt.mib-2.system.sysDescr.0
-  private static String  oidValue  = ".1.3.6.1.2.1.1.4.0";  // ends with 0 for scalar object
-  //private static String  oidValue  = ".1.3.6.1.2.1.1.1.0";
-  
-  private static int    snmpVersion  = SnmpConstants.version1;
+  // sysContact OID of MIB RFC 1213; Scalar Object = .iso.org.dod.internet.mgmt.mib-2.system.sysContact.0
+  private static String  sysContactOid  = ".1.3.6.1.2.1.1.4.0";  // ends with 0 for scalar object
 
-  private static String  community  = "public";
+  private static String  sysContactValue  = "pcpswitc";
+  
+  private static int    snmpVersion  = SnmpConstants.version2c;
+
+  private static String  community  = "private";
 
   public static void main(String[] args) throws Exception
   {
-    System.out.println("SNMP GET Demo");
+
+    System.out.println("SNMP SET Demo");
 
     // Create TransportMapping and Listen
     TransportMapping transport = new DefaultUdpTransportMapping();
@@ -49,20 +48,30 @@ public class SnmpGetExample
 
     // Create the PDU object
     PDU pdu = new PDU();
-    pdu.add(new VariableBinding(new OID(oidValue)));
-    pdu.setType(PDU.GET);
+    
+    // Setting the Oid and Value for sysContact variable
+    OID oid = new OID(sysContactOid);
+    Variable var = new OctetString(sysContactValue);
+    VariableBinding varBind = new VariableBinding(oid,var);
+    pdu.add(varBind);
+    
+    pdu.setType(PDU.SET);
     pdu.setRequestID(new Integer32(1));
 
     // Create Snmp object for sending data to Agent
     Snmp snmp = new Snmp(transport);
 
-    System.out.println("Sending Request to Agent...");
-    ResponseEvent response = snmp.get(pdu, comtarget);
+    System.out.println("\nRequest:\n[ Note: Set Request is sent for sysContact oid in RFC 1213 MIB.");
+    System.out.println("Set operation will change the sysContact value to " + sysContactValue );
+    System.out.println("Once this operation is completed, Querying for sysContact will get the value = " + sysContactValue + " ]");
+    
+    System.out.println("Request:\nSending Snmp Set Request to Agent...");
+    ResponseEvent response = snmp.set(pdu, comtarget);
 
     // Process Agent Response
     if (response != null)
     {
-      System.out.println("Got Response from Agent");
+      System.out.println("\nResponse:\nGot Snmp Set Response from Agent");
       PDU responsePDU = response.getResponse();
 
       if (responsePDU != null)
@@ -70,13 +79,10 @@ public class SnmpGetExample
         int errorStatus = responsePDU.getErrorStatus();
         int errorIndex = responsePDU.getErrorIndex();
         String errorStatusText = responsePDU.getErrorStatusText();
-        //responsePDU.set(".3.6.1.2.1.47.1.2.1.1.2.90", "vlan1090");
-        //responsePDU.set.set(90, responsePDU.getVariableBindings());
-
+        System.out.println(responsePDU);
         if (errorStatus == PDU.noError)
         {
-          System.out.println("Snmp Get Response = " + responsePDU.getVariableBindings());
-          System.out.println(responsePDU);
+          System.out.println("Snmp Set Response = " + responsePDU.getVariableBindings());
         }
         else
         {
